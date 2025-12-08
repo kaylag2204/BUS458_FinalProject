@@ -9,8 +9,9 @@ import sklearn
 # -----------------------------------------------------
 # Load Model
 # -----------------------------------------------------
-with open("loan_model.pkl", "rb") as file:
-    model = pickle.load(file)
+try:
+    with open("my_model.pkl", "rb") as file:
+        model_package = pickle.load(file)
 
 # Try to retrieve expected feature names
 if hasattr(model, "feature_names_in_"):
