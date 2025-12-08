@@ -140,19 +140,36 @@ with tab2:
             help="Credit score ranging from 300 (poor) to 850 (excellent)"
         )
 
-        # FICO Score Group
-        fico_group_options = {
-            "Excellent": "excellent",
-            "Fair": "fair",
-            "Good": "good",
-            "Poor": "poor",
-            "Very Good": "very_good"
-        }
-        fico_group_display = st.selectbox(
-            "FICO Score Category",
-            list(fico_group_options.keys())
+        # Automatically determine FICO category based on score
+        if fico_score >= 800:
+            auto_fico_category = "excellent"
+            category_display = "Exceptional (800-850)"
+            category_color = "#4CAF50"
+        elif fico_score >= 740:
+            auto_fico_category = "very_good"
+            category_display = "Very Good (740-799)"
+            category_color = "#8BC34A"
+        elif fico_score >= 670:
+            auto_fico_category = "good"
+            category_display = "Good (670-739)"
+            category_color = "#FFC107"
+        elif fico_score >= 580:
+            auto_fico_category = "fair"
+            category_display = "Fair (580-669)"
+            category_color = "#FF9800"
+        else:
+            auto_fico_category = "poor"
+            category_display = "Poor (300-579)"
+            category_color = "#F44336"
+
+        # Display the category
+        st.markdown(
+            f"<p style='color: {category_color}; font-weight: bold; font-size: 16px;'>📊 Category: {category_display}</p>",
+            unsafe_allow_html=True
         )
-        fico_group = fico_group_options[fico_group_display]
+        
+        # Use the auto-determined category for the model
+        fico_group = auto_fico_category
 
         # Monthly Gross Income
         monthly_income = st.number_input(
