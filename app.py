@@ -1,6 +1,3 @@
-%%writefile hmeqapp.py
-#Allows you to write code within a jupyter notebook file and save it
-
 # -*- coding: utf-8 -*-
 import streamlit as st
 import pickle
