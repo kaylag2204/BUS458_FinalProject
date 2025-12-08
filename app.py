@@ -59,10 +59,19 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Create tabs for better organization
-tab1, tab2, tab3 = st.tabs(["📋 Applicant Info", "💼 Financial Details", "🎯 Prediction"])
+# Initialize session state for current tab
+if 'current_tab' not in st.session_state:
+    st.session_state.current_tab = 0
 
-with tab1:
+# Tab names
+tab_names = ["📋 Applicant Info", "💼 Financial Details", "🎯 Prediction"]
+
+# Display current tab indicator
+st.markdown(f"### {tab_names[st.session_state.current_tab]}")
+st.markdown("---")
+
+# Tab 1: Applicant Info
+if st.session_state.current_tab == 0:
     st.header("Personal & Employment Information")
 
     col1, col2 = st.columns(2)
@@ -79,9 +88,10 @@ with tab1:
         }
         reason_display = st.selectbox(
             "Reason for Loan",
-            list(reason_options.keys())
+            list(reason_options.keys()),
+            key="reason"
         )
-        reason = reason_options[reason_display]
+        st.session_state.reason_value = reason_options[reason_display]
 
         # Employment Status
         employment_status_options = {
@@ -91,9 +101,10 @@ with tab1:
         }
         employment_status_display = st.selectbox(
             "Employment Status",
-            list(employment_status_options.keys())
+            list(employment_status_options.keys()),
+            key="employment_status"
         )
-        employment_status = employment_status_options[employment_status_display]
+        st.session_state.employment_status_value = employment_status_options[employment_status_display]
 
     with col2:
         # Employment Sector
@@ -113,18 +124,29 @@ with tab1:
         }
         employment_sector_display = st.selectbox(
             "Employment Sector",
-            list(employment_sector_options.keys())
+            list(employment_sector_options.keys()),
+            key="employment_sector"
         )
-        employment_sector = employment_sector_options[employment_sector_display]
+        st.session_state.employment_sector_value = employment_sector_options[employment_sector_display]
 
         # Lender Selection
         lender = st.selectbox(
             "Preferred Lender",
-            ["A", "B", "C"]
+            ["A", "B", "C"],
+            key="lender"
         )
-        lender_val = lender[0]  # Extract just the letter
+        st.session_state.lender_value = lender
 
-with tab2:
+    # Navigation buttons
+    st.markdown("---")
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col3:
+        if st.button("Next ➡️", type="primary", use_container_width=True):
+            st.session_state.current_tab = 1
+            st.rerun()
+
+# Tab 2: Financial Details
+elif st.session_state.current_tab == 1:
     st.header("Financial Information")
 
     col1, col2 = st.columns(2)
@@ -135,10 +157,12 @@ with tab2:
             "FICO Score",
             min_value=300,
             max_value=850,
-            value=650,
+            value=st.session_state.get('fico_score_value', 650),
             step=5,
-            help="Credit score ranging from 300 (poor) to 850 (excellent)"
+            help="Credit score ranging from 300 (poor) to 850 (excellent)",
+            key="fico_score"
         )
+        st.session_state.fico_score_value = fico_score
 
         # Automatically determine FICO category based on score
         if fico_score >= 800:
@@ -168,28 +192,31 @@ with tab2:
             unsafe_allow_html=True
         )
         
-        # Use the auto-determined category for the model
-        fico_group = auto_fico_category
+        st.session_state.fico_group_value = auto_fico_category
 
         # Monthly Gross Income
         monthly_income = st.number_input(
             "Monthly Gross Income ($)",
             min_value=0,
             max_value=50000,
-            value=5000,
+            value=st.session_state.get('monthly_income_value', 5000),
             step=100,
-            help="Your total monthly income before taxes"
+            help="Your total monthly income before taxes",
+            key="monthly_income"
         )
+        st.session_state.monthly_income_value = monthly_income
 
         # Monthly Housing Payment
         housing_payment = st.number_input(
             "Monthly Housing Payment ($)",
             min_value=0,
             max_value=10000,
-            value=1500,
+            value=st.session_state.get('housing_payment_value', 1500),
             step=50,
-            help="Monthly rent or mortgage payment"
+            help="Monthly rent or mortgage payment",
+            key="housing_payment"
         )
+        st.session_state.housing_payment_value = housing_payment
 
     with col2:
         # Requested Loan Amount
@@ -197,17 +224,20 @@ with tab2:
             "Requested Loan Amount ($)",
             min_value=500,
             max_value=150000,
-            value=50000,
+            value=st.session_state.get('loan_amount_value', 50000),
             step=1000,
-            help="Amount you're requesting to borrow"
+            help="Amount you're requesting to borrow",
+            key="loan_amount"
         )
+        st.session_state.loan_amount_value = loan_amount
 
         # Bankruptcy/Foreclosure History
         bankrupt = st.selectbox(
             "Ever Bankrupt or Foreclosed?",
-            ["No", "Yes"]
+            ["No", "Yes"],
+            key="bankrupt"
         )
-        bankrupt_val = 0 if bankrupt == "No" else 1
+        st.session_state.bankrupt_value = 0 if bankrupt == "No" else 1
 
         # Show calculated ratios
         if monthly_income > 0:
@@ -223,13 +253,38 @@ with tab2:
             if lti_ratio > 3:
                 st.warning("⚠️ High Loan-to-Income ratio (>3x) may reduce approval chances")
 
-with tab3:
+    # Navigation buttons
+    st.markdown("---")
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        if st.button("⬅️ Back", use_container_width=True):
+            st.session_state.current_tab = 0
+            st.rerun()
+    with col3:
+        if st.button("Next ➡️", type="primary", use_container_width=True):
+            st.session_state.current_tab = 2
+            st.rerun()
+
+# Tab 3: Prediction
+elif st.session_state.current_tab == 2:
     st.header("Loan Approval Prediction")
 
     # Predict button
     if st.button("🔮 Predict Approval Likelihood", type="primary", use_container_width=True):
 
         try:
+            # Get values from session state
+            reason = st.session_state.get('reason_value', 'cover_an_unexpected_cost')
+            employment_status = st.session_state.get('employment_status_value', 'full_time')
+            employment_sector = st.session_state.get('employment_sector_value', 'other')
+            lender_val = st.session_state.get('lender_value', 'A')
+            fico_score = st.session_state.get('fico_score_value', 650)
+            fico_group = st.session_state.get('fico_group_value', 'fair')
+            monthly_income = st.session_state.get('monthly_income_value', 5000)
+            housing_payment = st.session_state.get('housing_payment_value', 1500)
+            loan_amount = st.session_state.get('loan_amount_value', 50000)
+            bankrupt_val = st.session_state.get('bankrupt_value', 0)
+
             # Create zero-filled row for model input
             row = {col: 0 for col in model_columns}
 
@@ -409,6 +464,14 @@ with tab3:
             with st.expander("Show error details"):
                 st.code(str(e))
 
+    # Navigation buttons
+    st.markdown("---")
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:
+        if st.button("⬅️ Back", use_container_width=True):
+            st.session_state.current_tab = 1
+            st.rerun()
+
 # Sidebar with information
 with st.sidebar:
     st.header("ℹ️ About This Tool")
@@ -425,6 +488,4 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("**Created for BUS 458 Final Project**")
-    st.markdown("�📧 Contact: kgordon4@ncsu.edu")
-
-
+    st.markdown("📧 Contact: kgordon4@ncsu.edu")
