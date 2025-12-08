@@ -10,12 +10,16 @@ import sklearn
 # Load Model
 # -----------------------------------------------------
 try:
-    with open("my_model.pkl", "rb") as file:
-        model_package = pickle.load(file)
+    # Load Model
+    with open("loan_model.pkl", "rb") as file:
+        model = pickle.load(file)
+    
+    # Now safe to check attributes
+    if hasattr(model, "feature_names_in_"):
+        model_columns = model.feature_names_in_
+else:
+    model_columns = None
 
-# Try to retrieve expected feature names
-if hasattr(model, "feature_names_in_"):
-    model_columns = model.feature_names_in_
 else:
     st.warning("Model does not contain feature_names_in_. "
                "Make sure your model was trained on a DataFrame.")
