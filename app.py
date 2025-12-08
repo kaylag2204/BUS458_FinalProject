@@ -1,103 +1,141 @@
+# loanapp.py
 # -*- coding: utf-8 -*-
 import streamlit as st
 import pickle
 import pandas as pd
-import sklearn  # This is needed for the pickle file to load!
+import numpy as np
+import sklearn
 
-# Load the trained model
-# --- Put the Model in Drive First---
-with open("my_model.pkl", "rb") as file:
-    model_package = pickle.load(file)
+# -----------------------------------------------------
+# Load Model
+# -----------------------------------------------------
+with open("loan_model.pkl", "rb") as file:
+    model = pickle.load(file)
 
-# Title for the app
-# st.title("Home Equity Loan Approval")
+# Try to retrieve expected feature names
+if hasattr(model, "feature_names_in_"):
+    model_columns = model.feature_names_in_
+else:
+    st.warning("Model does not contain feature_names_in_. "
+               "Make sure your model was trained on a DataFrame.")
+    model_columns = None
+
+# -----------------------------------------------------
+# Streamlit Title
+# -----------------------------------------------------
 st.markdown(
-    "<h1 style='text-align: center; background-color: #ffcccc; padding: 10px; color: #cc0000;'><b>Home Equity Loan Approval</b></h1>",
+    "<h1 style='text-align: center; background-color: #4CAF50;"
+    "padding: 10px; color: white;'><b>Loan Approval Prediction</b></h1>",
     unsafe_allow_html=True
 )
 
-# Numeric inputs
-st.header("Enter Loan Applicant's Details")
+st.header("Enter Applicant's Details")
 
-# Input fields for numeric values - st = streamlit
-loan = st.slider("Loan Amount (LOAN)", min_value=1000, max_value=500000, step=1000)
-mortdue = st.slider("Mortgage Due (MORTDUE)", min_value=0.0, max_value=1000000.0, step=1000.0)
-value = st.slider("Property Value (VALUE)", min_value=0.0, max_value=1000000.0, step=1000.0)
-yoj = st.selectbox("Years at Job (YOJ)", options=list(range(1, 41)))  # Options from 1 to 40
-derog = st.number_input("Derogatory Reports (DEROG)", min_value=0, max_value=15, step=1)
-delinq = st.selectbox("Delinquent Reports (DELINQ)", options=list(range(0, 15)))  # Options from 0 to 10
-clage = st.slider("Age of Oldest Trade Line in Months (CLAGE)", min_value=0.0, max_value=100.0, step=1.0)
-ninq = st.slider("Number of Recent Credit Inquiries (NINQ)", min_value=0.0, max_value=15.0, step=1.0)
-clno = st.slider("Number of Credit Lines (CLNO)", min_value=0.0, max_value=50.0, step=1.0)
-debtinc = st.slider("Debt-to-Income Ratio (DEBTINC)", min_value=0.0, max_value=200.0, step=0.1)
+# -----------------------------------------------------
+# Numeric Inputs
+# -----------------------------------------------------
+requested_loan = st.slider("Requested Loan Amount ($)", 1000, 150000, step=1000)
+granted_loan   = st.slider("Granted Loan Amount ($)",   0,     150000, step=1000)
+fico_score     = st.slider("FICO Score", 300, 850, step=1)
+monthly_income = st.number_input("Monthly Gross Income ($)", 0, 50000, step=100)
+monthly_housing = st.number_input("Monthly Housing Payment ($)", 0, 10000, step=50)
+applications    = st.number_input("Number of Applications", 1, 10, step=1)
 
-# Categorical inputs with options
-reason = st.selectbox("Reason for Loan (REASON)", ["HomeImp", "DebtCon"])
-job = st.selectbox("Job Category (JOB)", ["ProfExe", "Other", "Mgr", "Office", "Sales"])
+# -----------------------------------------------------
+# Categorical Inputs
+# -----------------------------------------------------
+reason = st.selectbox("Reason for Loan", [
+    "debt_conslidation",
+    "home_improvement", 
+    "major_purchase",
+    "credit_card_refinancing",
+    "cover_an_unexpected_cost",
+    "other"
+])
 
-# Create the input data as a DataFrame
+fico_group = st.selectbox("FICO Score Group", [
+    "poor","fair","good","very_good","excellent"
+])
+
+employment_status = st.selectbox("Employment Status", [
+    "full_time","part_time","self_employed","unemployed"
+])
+
+employment_sector = st.selectbox("Employment Sector", [
+    "information_technology","health_care","consumer_discretionary","energy",
+    "materials","utilities","consumer_staples","communication_services",
+    "industrials","real_estate","financials"
+])
+
+lender = st.selectbox("Lender", ["A","B","C"])
+
+bankrupt = st.radio("Ever Bankrupt or Foreclose?", [0,1],
+                    format_func=lambda x: "No" if x==0 else "Yes")
+
+# -----------------------------------------------------
+# Build Input DataFrame
+# -----------------------------------------------------
 input_data = pd.DataFrame({
-    "LOAN": [loan],
-    "MORTDUE": [mortdue],
-    "VALUE": [value],
-    "YOJ": [yoj],
-    "DEROG": [derog],
-    "DELINQ": [delinq],
-    "CLAGE": [clage],
-    "NINQ": [ninq],
-    "CLNO": [clno],
-    "DEBTINC": [debtinc],
-    "REASON": [reason],
-    "JOB": [job]
+    "applications": [applications],
+    "Reason": [reason],
+    "Granted_Loan_Amount": [granted_loan],
+    "Requested_Loan_Amount": [requested_loan],
+    "FICO_score": [fico_score],
+    "Fico_Score_group": [fico_group],
+    "Employment_Status": [employment_status],
+    "Employment_Sector": [employment_sector],
+    "Monthly_Gross_Income": [monthly_income],
+    "Monthly_Housing_Payment": [monthly_housing],
+    "Ever_Bankrupt_or_Foreclose": [bankrupt],
+    "Lender": [lender]
 })
 
-# --- Prepare Data for Prediction ---
-# 1. One-hot encode the user's input.
-input_data_encoded = pd.get_dummies(input_data, columns=['REASON', 'JOB'])
+# One-hot encode
+categorical_columns = [
+    "Reason", "Fico_Score_group", "Employment_Status",
+    "Employment_Sector", "Lender"
+]
 
-# 2. Add any "missing" columns the model expects (fill with 0).
-model_columns = model.feature_names_in_
-for col in model_columns:
-    if col not in input_data_encoded.columns:
-        input_data_encoded[col] = 0
+input_encoded = pd.get_dummies(input_data, columns=categorical_columns, drop_first=True)
 
-# 3. Reorder/filter columns to exactly match the model's training data.
-input_data_encoded = input_data_encoded[model_columns]
+# -----------------------------------------------------
+# Align with model columns
+# -----------------------------------------------------
+if model_columns is not None:
 
-# Predict button
-if st.button("Evaluate Loan"):
-    # Predict using the loaded model
-    prediction = model.predict(input_data_encoded)[0]
-    
-    # Get prediction probability for confidence display
-    prediction_proba = model.predict_proba(input_data_encoded)[0]
-    
-    # Display result with probability
-    if prediction == 1:
-        confidence = prediction_proba[1] * 100
-        st.write(f"The prediction is: **Bad Loan** 🚫")
-        st.write(f"Confidence: {confidence:.2f}%")
+    # Add missing columns
+    for col in model_columns:
+        if col not in input_encoded.columns:
+            input_encoded[col] = 0
+
+    # Ensure ordering
+    input_encoded = input_encoded[model_columns]
+
+else:
+    st.error("Cannot align features — model_columns missing.")
+    st.stop()
+
+# -----------------------------------------------------
+# Prediction
+# -----------------------------------------------------
+if st.button("Evaluate Loan Application"):
+    prediction = model.predict(input_encoded)[0]
+
+    if hasattr(model, "predict_proba"):
+        proba = model.predict_proba(input_encoded)[0]
     else:
-        confidence = prediction_proba[0] * 100
-        st.write(f"The prediction is: **Good Loan** 💲")
-        st.write(f"Confidence: {confidence:.2f}%")
+        proba = [np.nan, np.nan]
 
+    if prediction == 1:
+        st.success("🎉 **Loan APPROVED!**")
+        st.write(f"Confidence: **{proba[1]*100:.2f}%**")
+        st.balloons()
+    else:
+        st.error("❌ **Loan DENIED**")
+        st.write(f"Confidence: **{proba[0]*100:.2f}%**")
 
-
-        """
-What happens if the user enters a value not in the training data?
-
-Example: User enters REASON = 'Vacation', but the model only knows 'DebtCon' and 'HomeImp'.
-
-1. pd.get_dummies creates a new column: REASON_Vacation = 1.
-2. The code then adds the *known* columns: REASON_DebtCon = 0 and REASON_HomeImp = 0.
-3. The final filtering step *drops* the unknown REASON_Vacation column because it's not in the
-   model's expected feature list.
-
-Result: The model receives REASON_DebtCon = 0 and REASON_HomeImp = 0, which correctly
-treats the unknown 'Vacation' input as "none of the known categories" (i.e., "Other").
-
-Note: Logistic Regression provides probability estimates via predict_proba(), which gives
-the confidence level for each prediction. This is displayed to give users insight into
-how certain the model is about its classification.
-"""
+    # Extra details
+    st.subheader("Prediction Details")
+    col1, col2 = st.columns(2)
+    col1.metric("Approval Probability", f"{proba[1]*100:.2f}%")
+    col2.metric("Denial Probability",   f"{proba[0]*100:.2f}%")
