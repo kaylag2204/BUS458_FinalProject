@@ -10,7 +10,7 @@ import sklearn
 # Load Model
 # -----------------------------------------------------
 try:
-    with open("loan_model.pkl", "rb") as file:
+    with open("my_model.pkl", "rb") as file:
         model = pickle.load(file)
 
     # Check if model has feature names
