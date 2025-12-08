@@ -67,16 +67,18 @@ housing = st.number_input("Monthly Housing Payment ($)", 0, 10000)
 bankrupt = st.radio("Ever Bankrupt or Foreclose?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
 
 # -----------------------------------------------------
-# Categorical Inputs
+# Categorical Inputs (display "other" but map to "unknown" internally)
 # -----------------------------------------------------
-reason = st.selectbox("Reason for Loan", [
+reason_display = st.selectbox("Reason for Loan", [
     "cover_an_unexpected_cost",
     "credit_card_refinancing",
     "debt_conslidation",
     "home_improvement",
     "major_purchase",
-    "unknown"
+    "other"
 ])
+# Map display value to internal value
+reason = "unknown" if reason_display == "other" else reason_display
 
 fico_group = st.selectbox("FICO Score Group", [
     "excellent", "fair", "good", "poor", "very_good"
@@ -86,12 +88,14 @@ emp_status = st.selectbox("Employment Status", [
     "full_time", "part_time", "unemployed"
 ])
 
-emp_sector = st.selectbox("Employment Sector", [
-    "unknown",
+emp_sector_display = st.selectbox("Employment Sector", [
+    "other",
     "communication_services", "consumer_discretionary", "consumer_staples",
     "energy", "financials", "health_care", "industrials",
     "information_technology", "materials", "real_estate", "utilities"
 ])
+# Map display value to internal value
+emp_sector = "unknown" if emp_sector_display == "other" else emp_sector_display
 
 lender = st.selectbox("Lender", ["A","B","C"])
 
