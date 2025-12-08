@@ -1,5 +1,3 @@
-# loanapp.py
-# -*- coding: utf-8 -*-
 import streamlit as st
 import pickle
 import pandas as pd
@@ -9,39 +7,48 @@ import numpy as np
 # Load Model + Scaler
 # -----------------------------------------------------
 try:
-    with open("my_model.pkl", "rb") as file:
-        model = pickle.load(file)
-    with open("loan_scaler.pkl", "rb") as file:
-        scaler = pickle.load(file)
-
+    with open("my_model.pkl", "rb") as f:
+        model = pickle.load(f)
+    with open("loan_scaler.pkl", "rb") as f:
+        scaler = pickle.load(f)
 except Exception as e:
     st.error(f"Error loading model or scaler: {e}")
     st.stop()
 
 # -----------------------------------------------------
-# Define feature names manually
+# Feature list FROM YOUR TRAINED MODEL
+# (These are the columns in X_train.columns)
 # -----------------------------------------------------
 model_columns = [
     'Requested_Loan_Amount', 'FICO_score', 'Monthly_Gross_Income',
     'Monthly_Housing_Payment', 'Ever_Bankrupt_or_Foreclose',
+
+    # Reason (reference = cover_an_unexpected_cost)
     'Reason_credit_card_refinancing', 'Reason_debt_conslidation',
     'Reason_home_improvement', 'Reason_major_purchase', 'Reason_other',
+
+    # FICO group (reference = excellent)
     'Fico_Score_group_fair', 'Fico_Score_group_good',
     'Fico_Score_group_poor', 'Fico_Score_group_very_good',
+
+    # Employment Status (reference = full_time)
     'Employment_Status_part_time', 'Employment_Status_unemployed',
+
+    # Employment Sector (reference = other)
     'Employment_Sector_communication_services',
     'Employment_Sector_consumer_discretionary',
     'Employment_Sector_consumer_staples', 'Employment_Sector_energy',
     'Employment_Sector_financials', 'Employment_Sector_health_care',
-    'Employment_Sector_industrials',
-    'Employment_Sector_information_technology',
+    'Employment_Sector_industrials', 'Employment_Sector_information_technology',
     'Employment_Sector_materials', 'Employment_Sector_real_estate',
     'Employment_Sector_utilities',
+
+    # Lender (reference = A)
     'Lender_B', 'Lender_C'
 ]
 
 # -----------------------------------------------------
-# UI
+# Title
 # -----------------------------------------------------
 st.markdown(
     "<h1 style='text-align: center; background-color: #4CAF50; padding: 10px; color: white;'><b>Loan Approval Prediction</b></h1>",
@@ -50,99 +57,101 @@ st.markdown(
 
 st.header("Enter Applicant Details")
 
-requested_loan = st.number_input("Requested Loan Amount ($)", 1000, 150000, step=500)
-fico_score = st.slider("FICO Score", 300, 850)
-monthly_income = st.number_input("Monthly Gross Income ($)", 0, step=100)
-monthly_housing = st.number_input("Monthly Housing Payment ($)", 0, step=50)
+# -----------------------------------------------------
+# Numeric Inputs
+# -----------------------------------------------------
+requested = st.number_input("Requested Loan Amount ($)", 500, 150000)
+fico = st.slider("FICO Score", 300, 850)
+income = st.number_input("Monthly Gross Income ($)", 0, 50000)
+housing = st.number_input("Monthly Housing Payment ($)", 0, 10000)
 bankrupt = st.radio("Ever Bankrupt or Foreclose?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
 
+# -----------------------------------------------------
+# Categorical Inputs
+# -----------------------------------------------------
 reason = st.selectbox("Reason for Loan", [
-    "credit_card_refinancing", "debt_conslidation", "home_improvement",
-    "major_purchase", "other", "cover_an_unexpected_cost"
+    "cover_an_unexpected_cost",
+    "credit_card_refinancing",
+    "debt_conslidation",
+    "home_improvement",
+    "major_purchase",
+    "other"
 ])
 
 fico_group = st.selectbox("FICO Score Group", [
-    "poor","fair","good","very_good","excellent"
+    "excellent", "fair", "good", "poor", "very_good"
 ])
 
-employment_status = st.selectbox("Employment Status", [
-    "full_time","self_employed","part_time","unemployed","other"
+emp_status = st.selectbox("Employment Status", [
+    "full_time", "part_time", "unemployed"
 ])
 
-employment_sector = st.selectbox("Employment Sector", [
-    "communication_services","consumer_discretionary","consumer_staples",
-    "energy","financials","health_care","industrials",
-    "information_technology","materials","real_estate","utilities","other"
+emp_sector = st.selectbox("Employment Sector", [
+    "other",
+    "communication_services", "consumer_discretionary", "consumer_staples",
+    "energy", "financials", "health_care", "industrials",
+    "information_technology", "materials", "real_estate", "utilities"
 ])
 
 lender = st.selectbox("Lender", ["A","B","C"])
 
 # -----------------------------------------------------
-# Build feature vector
+# Create zero-filled row for model input
 # -----------------------------------------------------
 row = {col: 0 for col in model_columns}
 
-row["Requested_Loan_Amount"] = requested_loan
-row["FICO_score"] = fico_score
-row["Monthly_Gross_Income"] = monthly_income
-row["Monthly_Housing_Payment"] = monthly_housing
+row["Requested_Loan_Amount"] = requested
+row["FICO_score"] = fico
+row["Monthly_Gross_Income"] = income
+row["Monthly_Housing_Payment"] = housing
 row["Ever_Bankrupt_or_Foreclose"] = bankrupt
 
 # Reason
 if reason != "cover_an_unexpected_cost":
-    dummy = f"Reason_{reason}"
-    if dummy in row:
-        row[dummy] = 1
+    key = f"Reason_{reason}"
+    if key in row: row[key] = 1
 
-# FICO Group
+# FICO group
 if fico_group != "excellent":
-    dummy = f"Fico_Score_group_{fico_group}"
-    if dummy in row:
-        row[dummy] = 1
+    key = f"Fico_Score_group_{fico_group}"
+    if key in row: row[key] = 1
 
 # Employment Status
-if employment_status in ["part_time", "unemployed"]:
-    dummy = f"Employment_Status_{employment_status}"
-    if dummy in row:
-        row[dummy] = 1
+if emp_status != "full_time":
+    key = f"Employment_Status_{emp_status}"
+    if key in row: row[key] = 1
 
 # Employment Sector
-if employment_sector != "other":
-    dummy = f"Employment_Sector_{employment_sector}"
-    if dummy in row:
-        row[dummy] = 1
+if emp_sector != "other":
+    key = f"Employment_Sector_{emp_sector}"
+    if key in row: row[key] = 1
 
 # Lender
 if lender in ["B","C"]:
-    dummy = f"Lender_{lender}"
-    if dummy in row:
-        row[dummy] = 1
+    key = f"Lender_{lender}"
+    if key in row: row[key] = 1
 
-# Convert to dataframe
+# Convert to df
 input_df = pd.DataFrame([row])
 
 # -----------------------------------------------------
-# Apply scaling (this fixes the “always approved” issue)
+# Scale features (required!)
 # -----------------------------------------------------
 input_scaled = scaler.transform(input_df)
 
 # -----------------------------------------------------
-# Prediction
+# Predict
 # -----------------------------------------------------
 if st.button("Evaluate Loan Application"):
-
-    pred = model.predict(input_scaled)[0]
     prob = model.predict_proba(input_scaled)[0]
+    pred = model.predict(input_scaled)[0]
 
     if pred == 1:
-        st.success("🎉 Loan APPROVED!")
-        st.write(f"Approval Confidence: **{prob[1]*100:.2f}%**")
+        st.success(f"🎉 Loan APPROVED! (Confidence {prob[1]*100:.1f}%)")
         st.balloons()
     else:
-        st.error("❌ Loan DENIED")
-        st.write(f"Denial Confidence: **{prob[0]*100:.2f}%**")
+        st.error(f"❌ Loan DENIED (Confidence {prob[0]*100:.1f}%)")
 
     st.subheader("Prediction Probabilities")
-    col1, col2 = st.columns(2)
-    col1.metric("Approval Probability", f"{prob[1]*100:.2f}%")
-    col2.metric("Denial Probability", f"{prob[0]*100:.2f}%")
+    st.metric("Approval", f"{prob[1]*100:.2f}%")
+    st.metric("Denial", f"{prob[0]*100:.2f}%")
