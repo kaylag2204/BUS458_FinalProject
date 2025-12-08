@@ -420,16 +420,6 @@ with st.sidebar:
         **Model Details:**
         - Algorithm: {model_type}
         - Training Data: ~100,000 applications
-
-        **Lender Payouts:**
-        - Lender A: $250 per approval
-        - Lender B: $350 per approval
-        - Lender C: $150 per approval
-
-        **Important Notes:**
-        - This is a prediction tool, not a guarantee
-        - Actual approval depends on lender-specific criteria
-        - Results should be used as guidance only
         """
     )
 
@@ -437,9 +427,4 @@ with st.sidebar:
     st.markdown("**Created for BUS 458 Final Project**")
     st.markdown("�📧 Contact: kgordon4@ncsu.edu")
 
-# Footer
-st.markdown("---")
-st.markdown(
-    "<p style='text-align: center; color: #888; font-size: 12px;'>⚠️ For educational purposes only. Not actual financial advice.</p>",
-    unsafe_allow_html=True
-)
+
