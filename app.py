@@ -12,15 +12,31 @@ try:
     with open("my_model.pkl", "rb") as file:
         model = pickle.load(file)
 
-    if hasattr(model, "feature_names_in_"):
-        model_columns = list(model.feature_names_in_)
-    else:
-        st.error("Model does not contain feature_names_in_.")
-        st.stop()
-
 except Exception as e:
     st.error(f"Error loading model: {e}")
     st.stop()
+
+# -----------------------------------------------------
+# Define feature names manually (model lacks feature_names_in_)
+# -----------------------------------------------------
+model_columns = [
+    'Requested_Loan_Amount', 'FICO_score', 'Monthly_Gross_Income',
+    'Monthly_Housing_Payment', 'Ever_Bankrupt_or_Foreclose',
+    'Reason_credit_card_refinancing', 'Reason_debt_conslidation',
+    'Reason_home_improvement', 'Reason_major_purchase', 'Reason_other',
+    'Fico_Score_group_fair', 'Fico_Score_group_good',
+    'Fico_Score_group_poor', 'Fico_Score_group_very_good',
+    'Employment_Status_part_time', 'Employment_Status_unemployed',
+    'Employment_Sector_communication_services',
+    'Employment_Sector_consumer_discretionary',
+    'Employment_Sector_consumer_staples', 'Employment_Sector_energy',
+    'Employment_Sector_financials', 'Employment_Sector_health_care',
+    'Employment_Sector_industrials',
+    'Employment_Sector_information_technology',
+    'Employment_Sector_materials', 'Employment_Sector_real_estate',
+    'Employment_Sector_utilities',
+    'Lender_B', 'Lender_C'
+]
 
 # -----------------------------------------------------
 # Title
@@ -123,7 +139,6 @@ if employment_status in ["part_time", "unemployed"]:
     dummy = f"Employment_Status_{employment_status}"
     if dummy in row:
         row[dummy] = 1
-# full_time, self_employed, other remain reference
 
 # Employment Sector one-hot
 if employment_sector != "other":
@@ -136,7 +151,6 @@ if lender in ["B", "C"]:
     dummy = f"Lender_{lender}"
     if dummy in row:
         row[dummy] = 1
-# A remains reference
 
 # Convert to DataFrame
 input_df = pd.DataFrame([row])
