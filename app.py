@@ -9,21 +9,26 @@ import sklearn
 # -----------------------------------------------------
 # Load Model
 # -----------------------------------------------------
+# -----------------------------------------------------
+# Load Model
+# -----------------------------------------------------
 try:
-    # Load Model
     with open("loan_model.pkl", "rb") as file:
         model = pickle.load(file)
-    
-    # Now safe to check attributes
+
+    # Check if model has feature names
     if hasattr(model, "feature_names_in_"):
         model_columns = model.feature_names_in_
-else:
-    model_columns = None
+    else:
+        st.warning(
+            "Model does not contain feature_names_in_. "
+            "Make sure your model was trained on a DataFrame."
+        )
+        model_columns = None
 
-else:
-    st.warning("Model does not contain feature_names_in_. "
-               "Make sure your model was trained on a DataFrame.")
-    model_columns = None
+except Exception as e:
+    st.error(f"❌ Error loading model: {e}")
+    st.stop()
 
 # -----------------------------------------------------
 # Streamlit Title
