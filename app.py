@@ -19,7 +19,7 @@ try:
     with open("loan_scaler.pkl", "rb") as file:
         scaler = pickle.load(file)
     
-    model_type = type(model).__name__.replace('Classifier', ' Classifier').replace('Regression', ' Regression')
+    model_type = "Logistic Regression"
     
 except FileNotFoundError as e:
     st.error(f"❌ Required file not found: {str(e)}")
@@ -68,41 +68,54 @@ with tab1:
     col1, col2 = st.columns(2)
 
     with col1:
-        # Loan Purpose
-        reason = st.selectbox(
+        # Loan Purpose - Mapping display to actual values
+        reason_options = {
+            "Cover an Unexpected Cost": "cover_an_unexpected_cost",
+            "Credit Card Refinancing": "credit_card_refinancing",
+            "Debt Consolidation": "debt_conslidation",
+            "Home Improvement": "home_improvement",
+            "Major Purchase": "major_purchase",
+            "Other": "other"
+        }
+        reason_display = st.selectbox(
             "Reason for Loan",
-            ["cover_an_unexpected_cost", "credit_card_refinancing", "debt_conslidation",
-             "home_improvement", "major_purchase", "other"]
+            list(reason_options.keys())
         )
+        reason = reason_options[reason_display]
 
         # Employment Status
-        employment_status = st.selectbox(
+        employment_status_options = {
+            "Full Time": "full_time",
+            "Part Time": "part_time",
+            "Unemployed": "unemployed"
+        }
+        employment_status_display = st.selectbox(
             "Employment Status",
-            ["full_time", "part_time", "unemployed"]
+            list(employment_status_options.keys())
         )
-
-        # FICO Score Group
-        fico_group = st.selectbox(
-            "FICO Score Category",
-            ["excellent", "fair", "good", "poor", "very_good"]
-        )
+        employment_status = employment_status_options[employment_status_display]
 
     with col2:
         # Employment Sector
-        employment_sector = st.selectbox(
+        employment_sector_options = {
+            "Other": "other",
+            "Communication Services": "communication_services",
+            "Consumer Discretionary": "consumer_discretionary",
+            "Consumer Staples": "consumer_staples",
+            "Energy": "energy",
+            "Financials": "financials",
+            "Health Care": "health_care",
+            "Industrials": "industrials",
+            "Information Technology": "information_technology",
+            "Materials": "materials",
+            "Real Estate": "real_estate",
+            "Utilities": "utilities"
+        }
+        employment_sector_display = st.selectbox(
             "Employment Sector",
-            ["other", "communication_services", "consumer_discretionary", 
-             "consumer_staples", "energy", "financials", "health_care", 
-             "industrials", "information_technology", "materials", 
-             "real_estate", "utilities"]
+            list(employment_sector_options.keys())
         )
-
-        # Bankruptcy/Foreclosure History
-        bankrupt = st.selectbox(
-            "Ever Bankrupt or Foreclosed?",
-            ["No", "Yes"]
-        )
-        bankrupt_val = 0 if bankrupt == "No" else 1
+        employment_sector = employment_sector_options[employment_sector_display]
 
         # Lender Selection
         lender = st.selectbox(
@@ -126,6 +139,20 @@ with tab2:
             step=5,
             help="Credit score ranging from 300 (poor) to 850 (excellent)"
         )
+
+        # FICO Score Group
+        fico_group_options = {
+            "Excellent": "excellent",
+            "Fair": "fair",
+            "Good": "good",
+            "Poor": "poor",
+            "Very Good": "very_good"
+        }
+        fico_group_display = st.selectbox(
+            "FICO Score Category",
+            list(fico_group_options.keys())
+        )
+        fico_group = fico_group_options[fico_group_display]
 
         # Monthly Gross Income
         monthly_income = st.number_input(
@@ -157,6 +184,13 @@ with tab2:
             step=1000,
             help="Amount you're requesting to borrow"
         )
+
+        # Bankruptcy/Foreclosure History
+        bankrupt = st.selectbox(
+            "Ever Bankrupt or Foreclosed?",
+            ["No", "Yes"]
+        )
+        bankrupt_val = 0 if bankrupt == "No" else 1
 
         # Show calculated ratios
         if monthly_income > 0:
