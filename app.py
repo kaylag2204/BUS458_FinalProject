@@ -6,18 +6,20 @@ import pandas as pd
 import numpy as np
 
 # -----------------------------------------------------
-# Load Model
+# Load Model + Scaler
 # -----------------------------------------------------
 try:
     with open("my_model.pkl", "rb") as file:
         model = pickle.load(file)
+    with open("loan_scaler.pkl", "rb") as file:
+        scaler = pickle.load(file)
 
 except Exception as e:
-    st.error(f"Error loading model: {e}")
+    st.error(f"Error loading model or scaler: {e}")
     st.stop()
 
 # -----------------------------------------------------
-# Define feature names manually (model lacks feature_names_in_)
+# Define feature names manually
 # -----------------------------------------------------
 model_columns = [
     'Requested_Loan_Amount', 'FICO_score', 'Monthly_Gross_Income',
@@ -39,7 +41,7 @@ model_columns = [
 ]
 
 # -----------------------------------------------------
-# Title
+# UI
 # -----------------------------------------------------
 st.markdown(
     "<h1 style='text-align: center; background-color: #4CAF50; padding: 10px; color: white;'><b>Loan Approval Prediction</b></h1>",
@@ -48,119 +50,89 @@ st.markdown(
 
 st.header("Enter Applicant Details")
 
-# -----------------------------------------------------
-# Numeric Inputs
-# -----------------------------------------------------
-requested_loan = st.number_input("Requested Loan Amount ($)", min_value=1000, max_value=150000, step=500)
+requested_loan = st.number_input("Requested Loan Amount ($)", 1000, 150000, step=500)
 fico_score = st.slider("FICO Score", 300, 850)
-monthly_income = st.number_input("Monthly Gross Income ($)", min_value=0, step=100)
-monthly_housing = st.number_input("Monthly Housing Payment ($)", min_value=0, step=50)
+monthly_income = st.number_input("Monthly Gross Income ($)", 0, step=100)
+monthly_housing = st.number_input("Monthly Housing Payment ($)", 0, step=50)
 bankrupt = st.radio("Ever Bankrupt or Foreclose?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
 
-# -----------------------------------------------------
-# Categorical Inputs (includes reference categories)
-# -----------------------------------------------------
-
-# Reason (reference: cover_an_unexpected_cost)
 reason = st.selectbox("Reason for Loan", [
-    "credit_card_refinancing",
-    "debt_conslidation",
-    "home_improvement",
-    "major_purchase",
-    "other",
-    "cover_an_unexpected_cost"  # reference
+    "credit_card_refinancing", "debt_conslidation", "home_improvement",
+    "major_purchase", "other", "cover_an_unexpected_cost"
 ])
 
-# FICO Score Group (reference: excellent)
 fico_group = st.selectbox("FICO Score Group", [
-    "poor",
-    "fair",
-    "good",
-    "very_good",
-    "excellent"  # reference
+    "poor","fair","good","very_good","excellent"
 ])
 
-# Employment Status (reference: full_time, self_employed, other)
 employment_status = st.selectbox("Employment Status", [
-    "full_time",     # reference
-    "self_employed", # reference
-    "part_time",
-    "unemployed",
-    "other"          # reference
+    "full_time","self_employed","part_time","unemployed","other"
 ])
 
-# Employment Sector (reference: other)
 employment_sector = st.selectbox("Employment Sector", [
-    "communication_services",
-    "consumer_discretionary",
-    "consumer_staples",
-    "energy",
-    "financials",
-    "health_care",
-    "industrials",
-    "information_technology",
-    "materials",
-    "real_estate",
-    "utilities",
-    "other"  # reference
+    "communication_services","consumer_discretionary","consumer_staples",
+    "energy","financials","health_care","industrials",
+    "information_technology","materials","real_estate","utilities","other"
 ])
 
-# Lender (reference: A)
-lender = st.selectbox("Lender", ["A", "B", "C"])
+lender = st.selectbox("Lender", ["A","B","C"])
 
 # -----------------------------------------------------
-# Build Input Vector According to Dummy Schema
+# Build feature vector
 # -----------------------------------------------------
-
-# Initialize a full row of zeros for all model features
 row = {col: 0 for col in model_columns}
 
-# Numeric features
 row["Requested_Loan_Amount"] = requested_loan
 row["FICO_score"] = fico_score
 row["Monthly_Gross_Income"] = monthly_income
 row["Monthly_Housing_Payment"] = monthly_housing
 row["Ever_Bankrupt_or_Foreclose"] = bankrupt
 
-# Reason one-hot
+# Reason
 if reason != "cover_an_unexpected_cost":
     dummy = f"Reason_{reason}"
     if dummy in row:
         row[dummy] = 1
 
-# FICO Score Group one-hot
+# FICO Group
 if fico_group != "excellent":
     dummy = f"Fico_Score_group_{fico_group}"
     if dummy in row:
         row[dummy] = 1
 
-# Employment Status one-hot
+# Employment Status
 if employment_status in ["part_time", "unemployed"]:
     dummy = f"Employment_Status_{employment_status}"
     if dummy in row:
         row[dummy] = 1
 
-# Employment Sector one-hot
+# Employment Sector
 if employment_sector != "other":
     dummy = f"Employment_Sector_{employment_sector}"
     if dummy in row:
         row[dummy] = 1
 
-# Lender one-hot
-if lender in ["B", "C"]:
+# Lender
+if lender in ["B","C"]:
     dummy = f"Lender_{lender}"
     if dummy in row:
         row[dummy] = 1
 
-# Convert to DataFrame
+# Convert to dataframe
 input_df = pd.DataFrame([row])
+
+# -----------------------------------------------------
+# Apply scaling (this fixes the “always approved” issue)
+# -----------------------------------------------------
+input_scaled = scaler.transform(input_df)
 
 # -----------------------------------------------------
 # Prediction
 # -----------------------------------------------------
 if st.button("Evaluate Loan Application"):
-    pred = model.predict(input_df)[0]
-    prob = model.predict_proba(input_df)[0]
+
+    pred = model.predict(input_scaled)[0]
+    prob = model.predict_proba(input_scaled)[0]
 
     if pred == 1:
         st.success("🎉 Loan APPROVED!")
