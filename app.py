@@ -29,7 +29,7 @@ except Exception as e:
     st.error(f"❌ Error loading model or scaler: {str(e)}")
     st.stop()
 
-# Feature list from trained model
+# Feature list from trained model (matching second file)
 model_columns = [
     'Requested_Loan_Amount', 'FICO_score', 'Monthly_Gross_Income',
     'Monthly_Housing_Payment', 'Ever_Bankrupt_or_Foreclose',
@@ -59,22 +59,16 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Initialize session state for current tab
-if 'current_tab' not in st.session_state:
-    st.session_state.current_tab = 0
+# Create tabs for better organization
+tab1, tab2, tab3 = st.tabs(["📋 Applicant Info", "💼 Financial Details", "🎯 Prediction"])
 
-tab_names = ["📋 Applicant Info", "💼 Financial Details", "🎯 Prediction"]
-
-# Create tabs
-tabs = st.tabs(tab_names)
-
-# ---------------------- TAB 1: Applicant Info ----------------------
-with tabs[0]:
+with tab1:
     st.header("Personal & Employment Information")
 
     col1, col2 = st.columns(2)
 
     with col1:
+        # Loan Purpose - Mapping display to actual values
         reason_options = {
             "Cover an Unexpected Cost": "cover_an_unexpected_cost",
             "Credit Card Refinancing": "credit_card_refinancing",
@@ -85,11 +79,11 @@ with tabs[0]:
         }
         reason_display = st.selectbox(
             "Reason for Loan",
-            list(reason_options.keys()),
-            key="reason"
+            list(reason_options.keys())
         )
-        st.session_state.reason_value = reason_options[reason_display]
+        reason = reason_options[reason_display]
 
+        # Employment Status
         employment_status_options = {
             "Full Time": "full_time",
             "Part Time": "part_time",
@@ -97,12 +91,12 @@ with tabs[0]:
         }
         employment_status_display = st.selectbox(
             "Employment Status",
-            list(employment_status_options.keys()),
-            key="employment_status"
+            list(employment_status_options.keys())
         )
-        st.session_state.employment_status_value = employment_status_options[employment_status_display]
+        employment_status = employment_status_options[employment_status_display]
 
     with col2:
+        # Employment Sector
         employment_sector_options = {
             "Other": "other",
             "Communication Services": "communication_services",
@@ -119,127 +113,303 @@ with tabs[0]:
         }
         employment_sector_display = st.selectbox(
             "Employment Sector",
-            list(employment_sector_options.keys()),
-            key="employment_sector"
+            list(employment_sector_options.keys())
         )
-        st.session_state.employment_sector_value = employment_sector_options[employment_sector_display]
+        employment_sector = employment_sector_options[employment_sector_display]
 
+        # Lender Selection
         lender = st.selectbox(
             "Preferred Lender",
-            ["A", "B", "C"],
-            key="lender"
+            ["A", "B", "C"]
         )
-        st.session_state.lender_value = lender
+        lender_val = lender[0]  # Extract just the letter
 
-    # Navigation
-    col1, col2, col3 = st.columns([1,1,1])
-    with col3:
-        if st.button("Next ➡️", key="to_financials"):
-            st.session_state.current_tab = 1
-            st.experimental_rerun()
-
-# ---------------------- TAB 2: Financial Details ----------------------
-with tabs[1]:
+with tab2:
     st.header("Financial Information")
 
     col1, col2 = st.columns(2)
+
     with col1:
+        # FICO Score (numeric)
         fico_score = st.slider(
             "FICO Score",
             min_value=300,
             max_value=850,
-            value=st.session_state.get('fico_score_value', 650),
+            value=650,
             step=5,
-            help="Credit score ranging from 300 (poor) to 850 (excellent)",
-            key="fico_score"
+            help="Credit score ranging from 300 (poor) to 850 (excellent)"
         )
-        st.session_state.fico_score_value = fico_score
 
-        # Determine FICO category
+        # Automatically determine FICO category based on score
         if fico_score >= 800:
             auto_fico_category = "excellent"
+            category_display = "Exceptional (800-850)"
+            category_color = "#4CAF50"
         elif fico_score >= 740:
             auto_fico_category = "very_good"
+            category_display = "Very Good (740-799)"
+            category_color = "#8BC34A"
         elif fico_score >= 670:
             auto_fico_category = "good"
+            category_display = "Good (670-739)"
+            category_color = "#FFC107"
         elif fico_score >= 580:
             auto_fico_category = "fair"
+            category_display = "Fair (580-669)"
+            category_color = "#FF9800"
         else:
             auto_fico_category = "poor"
-        st.session_state.fico_group_value = auto_fico_category
+            category_display = "Poor (300-579)"
+            category_color = "#F44336"
 
+        # Display the category
+        st.markdown(
+            f"<p style='color: {category_color}; font-weight: bold; font-size: 16px;'>📊 Category: {category_display}</p>",
+            unsafe_allow_html=True
+        )
+        
+        # Use the auto-determined category for the model
+        fico_group = auto_fico_category
+
+        # Monthly Gross Income
         monthly_income = st.number_input(
             "Monthly Gross Income ($)",
             min_value=0,
             max_value=50000,
-            value=st.session_state.get('monthly_income_value', 5000),
+            value=5000,
             step=100,
-            key="monthly_income"
+            help="Your total monthly income before taxes"
         )
-        st.session_state.monthly_income_value = monthly_income
 
+        # Monthly Housing Payment
         housing_payment = st.number_input(
             "Monthly Housing Payment ($)",
             min_value=0,
             max_value=10000,
-            value=st.session_state.get('housing_payment_value', 1500),
+            value=1500,
             step=50,
-            key="housing_payment"
+            help="Monthly rent or mortgage payment"
         )
-        st.session_state.housing_payment_value = housing_payment
 
     with col2:
+        # Requested Loan Amount
         loan_amount = st.number_input(
             "Requested Loan Amount ($)",
             min_value=500,
             max_value=150000,
-            value=st.session_state.get('loan_amount_value', 50000),
+            value=50000,
             step=1000,
-            key="loan_amount"
+            help="Amount you're requesting to borrow"
         )
-        st.session_state.loan_amount_value = loan_amount
 
+        # Bankruptcy/Foreclosure History
         bankrupt = st.selectbox(
             "Ever Bankrupt or Foreclosed?",
-            ["No", "Yes"],
-            key="bankrupt"
+            ["No", "Yes"]
         )
-        st.session_state.bankrupt_value = 0 if bankrupt == "No" else 1
+        bankrupt_val = 0 if bankrupt == "No" else 1
 
-        # Show ratios
+        # Show calculated ratios
         if monthly_income > 0:
             dti_ratio = housing_payment / monthly_income
             lti_ratio = loan_amount / (monthly_income * 12)
+
             st.metric("Debt-to-Income Ratio", f"{dti_ratio:.2%}")
             st.metric("Loan-to-Income Ratio", f"{lti_ratio:.2f}x")
 
-    # Navigation
-    col1, col2, col3 = st.columns([1,1,1])
-    with col1:
-        if st.button("⬅️ Back", key="back_to_applicant"):
-            st.session_state.current_tab = 0
-            st.experimental_rerun()
-    with col3:
-        if st.button("Next ➡️", key="to_prediction"):
-            st.session_state.current_tab = 2
-            st.experimental_rerun()
+            # Add warnings
+            if dti_ratio > 0.43:
+                st.warning("⚠️ High DTI ratio (>43%) may reduce approval chances")
+            if lti_ratio > 3:
+                st.warning("⚠️ High Loan-to-Income ratio (>3x) may reduce approval chances")
 
-# ---------------------- TAB 3: Prediction ----------------------
-with tabs[2]:
+with tab3:
     st.header("Loan Approval Prediction")
 
-    if st.button("🔮 Predict Approval Likelihood", key="predict_button"):
-        # Prediction logic (your existing code)
-        st.success("Prediction logic would run here...")
+    # Predict button
+    if st.button("🔮 Predict Approval Likelihood", type="primary", use_container_width=True):
 
-    # Navigation
-    col1, col2, col3 = st.columns([1,1,1])
-    with col1:
-        if st.button("⬅️ Back", key="back_to_financials"):
-            st.session_state.current_tab = 1
-            st.experimental_rerun()
+        try:
+            # Create zero-filled row for model input
+            row = {col: 0 for col in model_columns}
 
-# Sidebar
+            # Set numeric features
+            row["Requested_Loan_Amount"] = loan_amount
+            row["FICO_score"] = fico_score
+            row["Monthly_Gross_Income"] = monthly_income
+            row["Monthly_Housing_Payment"] = housing_payment
+            row["Ever_Bankrupt_or_Foreclose"] = bankrupt_val
+
+            # Set Reason (reference = cover_an_unexpected_cost)
+            if reason != "cover_an_unexpected_cost":
+                key = f"Reason_{reason}"
+                if key in row:
+                    row[key] = 1
+
+            # Set FICO group (reference = excellent)
+            if fico_group != "excellent":
+                key = f"Fico_Score_group_{fico_group}"
+                if key in row:
+                    row[key] = 1
+
+            # Set Employment Status (reference = full_time)
+            if employment_status != "full_time":
+                key = f"Employment_Status_{employment_status}"
+                if key in row:
+                    row[key] = 1
+
+            # Set Employment Sector (reference = other)
+            if employment_sector != "other":
+                key = f"Employment_Sector_{employment_sector}"
+                if key in row:
+                    row[key] = 1
+
+            # Set Lender (reference = A)
+            if lender_val in ["B", "C"]:
+                key = f"Lender_{lender_val}"
+                if key in row:
+                    row[key] = 1
+
+            # Convert to DataFrame
+            input_df = pd.DataFrame([row])
+
+            # Scale features (REQUIRED)
+            input_scaled = scaler.transform(input_df)
+
+            # Get prediction probability
+            prediction_proba = model.predict_proba(input_scaled)[0]
+            prediction = model.predict(input_scaled)[0]
+
+            # Display results with styling
+            st.markdown("---")
+
+            col1, col2, col3 = st.columns([1, 2, 1])
+
+            with col2:
+                if prediction == 1:
+                    st.success("✅ **LIKELY TO BE APPROVED**")
+                    st.balloons()
+                else:
+                    st.error("❌ **LIKELY TO BE DENIED**")
+
+                # Show probability
+                st.metric(
+                    "Approval Probability",
+                    f"{prediction_proba[1]:.1%}"
+                )
+
+                # Progress bar
+                st.progress(float(prediction_proba[1]))
+
+                # Show confidence level
+                approval_prob = prediction_proba[1]
+                if approval_prob > 0.7 or approval_prob < 0.3:
+                    confidence = "High"
+                    color = "green" if prediction == 1 else "red"
+                elif approval_prob > 0.6 or approval_prob < 0.4:
+                    confidence = "Medium"
+                    color = "orange"
+                else:
+                    confidence = "Low (Borderline)"
+                    color = "gray"
+
+                st.markdown(f"**Confidence Level:** <span style='color: {color};'>{confidence}</span>", unsafe_allow_html=True)
+
+            # Show probabilities
+            st.markdown("---")
+            st.subheader("📊 Prediction Probabilities")
+            prob_col1, prob_col2 = st.columns(2)
+            with prob_col1:
+                st.metric("Approval", f"{prediction_proba[1]*100:.2f}%")
+            with prob_col2:
+                st.metric("Denial", f"{prediction_proba[0]*100:.2f}%")
+
+            # Show key factors
+            st.markdown("---")
+            st.subheader("📊 Key Factors in This Decision")
+
+            factor_col1, factor_col2 = st.columns(2)
+
+            with factor_col1:
+                st.markdown("**Positive Factors:**")
+                positive_factors = []
+
+                if fico_score >= 700:
+                    positive_factors.append(f"✓ Good FICO score ({fico_score})")
+                if monthly_income > 0 and housing_payment / monthly_income < 0.36:
+                    positive_factors.append(f"✓ Low debt-to-income ratio ({housing_payment / monthly_income:.1%})")
+                if monthly_income > 0 and loan_amount / (monthly_income * 12) < 2:
+                    positive_factors.append(f"✓ Reasonable loan size ({loan_amount / (monthly_income * 12):.1f}x income)")
+                if bankrupt_val == 0:
+                    positive_factors.append("✓ No bankruptcy history")
+                if employment_status == "full_time":
+                    positive_factors.append("✓ Full-time employment")
+
+                if positive_factors:
+                    for factor in positive_factors:
+                        st.markdown(factor)
+                else:
+                    st.markdown("_No strong positive factors identified_")
+
+            with factor_col2:
+                st.markdown("**Risk Factors:**")
+                risk_factors = []
+
+                if fico_score < 640:
+                    risk_factors.append(f"⚠ Low FICO score ({fico_score})")
+                if monthly_income > 0 and housing_payment / monthly_income > 0.43:
+                    risk_factors.append(f"⚠ High debt-to-income ratio ({housing_payment / monthly_income:.1%})")
+                if monthly_income > 0 and loan_amount / (monthly_income * 12) > 3:
+                    risk_factors.append(f"⚠ Large loan relative to income ({loan_amount / (monthly_income * 12):.1f}x)")
+                if bankrupt_val == 1:
+                    risk_factors.append("⚠ Bankruptcy/foreclosure history")
+                if employment_status == "part_time":
+                    risk_factors.append("⚠ Part-time employment")
+                if employment_status == "unemployed":
+                    risk_factors.append("⚠ Unemployed")
+
+                if risk_factors:
+                    for factor in risk_factors:
+                        st.markdown(factor)
+                else:
+                    st.markdown("_No major risk factors identified_")
+
+            # Recommendations
+            st.markdown("---")
+            st.subheader("💡 Recommendations")
+
+            if prediction == 0:
+                st.info(
+                    """
+                    **To improve your approval chances:**
+                    - Improve your credit score by paying bills on time
+                    - Reduce your debt-to-income ratio by paying down existing debts
+                    - Consider requesting a smaller loan amount
+                    - Wait 6-12 months to build a stronger financial profile
+                    """
+                )
+            else:
+                # Show expected payout
+                payout_map = {'A': 250, 'B': 350, 'C': 150}
+                expected_payout = payout_map[lender_val]
+
+                st.success(
+                    f"""
+                    **Next Steps:**
+                    - Your application shows strong approval potential
+                    - Expected platform payout if approved: ${expected_payout}
+                    - Consider applying to Lender {lender_val} (selected preference)
+                    - Ensure all documentation is accurate and complete
+                    """
+                )
+
+        except Exception as e:
+            st.error(f"❌ Prediction error: {str(e)}")
+            st.info("Please check that all input values are valid and try again.")
+            with st.expander("Show error details"):
+                st.code(str(e))
+
+# Sidebar with information
 with st.sidebar:
     st.header("ℹ️ About This Tool")
     st.markdown(
@@ -255,4 +425,4 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("**Created for BUS 458 Final Project**")
-    st.markdown("📧 Contact: kgordon4@ncsu.edu")
+    st.markdown("�📧 Contact: kgordon4@ncsu.edu")
