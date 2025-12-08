@@ -25,7 +25,7 @@ model_columns = [
 
     # Reason (reference = cover_an_unexpected_cost)
     'Reason_credit_card_refinancing', 'Reason_debt_conslidation',
-    'Reason_home_improvement', 'Reason_major_purchase', 'Reason_unknown',
+    'Reason_home_improvement', 'Reason_major_purchase', 'Reason_other',
 
     # FICO group (reference = excellent)
     'Fico_Score_group_fair', 'Fico_Score_group_good',
@@ -34,7 +34,7 @@ model_columns = [
     # Employment Status (reference = full_time)
     'Employment_Status_part_time', 'Employment_Status_unemployed',
 
-    # Employment Sector (reference = unknown)
+    # Employment Sector (reference = other)
     'Employment_Sector_communication_services',
     'Employment_Sector_consumer_discretionary',
     'Employment_Sector_consumer_staples', 'Employment_Sector_energy',
@@ -67,9 +67,9 @@ housing = st.number_input("Monthly Housing Payment ($)", 0, 10000)
 bankrupt = st.radio("Ever Bankrupt or Foreclose?", [0,1], format_func=lambda x: "No" if x==0 else "Yes")
 
 # -----------------------------------------------------
-# Categorical Inputs (display "other" but map to "unknown" internally)
+# Categorical Inputs
 # -----------------------------------------------------
-reason_display = st.selectbox("Reason for Loan", [
+reason = st.selectbox("Reason for Loan", [
     "cover_an_unexpected_cost",
     "credit_card_refinancing",
     "debt_conslidation",
@@ -77,8 +77,6 @@ reason_display = st.selectbox("Reason for Loan", [
     "major_purchase",
     "other"
 ])
-# Map display value to internal value
-reason = "unknown" if reason_display == "other" else reason_display
 
 fico_group = st.selectbox("FICO Score Group", [
     "excellent", "fair", "good", "poor", "very_good"
@@ -88,14 +86,12 @@ emp_status = st.selectbox("Employment Status", [
     "full_time", "part_time", "unemployed"
 ])
 
-emp_sector_display = st.selectbox("Employment Sector", [
+emp_sector = st.selectbox("Employment Sector", [
     "other",
     "communication_services", "consumer_discretionary", "consumer_staples",
     "energy", "financials", "health_care", "industrials",
     "information_technology", "materials", "real_estate", "utilities"
 ])
-# Map display value to internal value
-emp_sector = "unknown" if emp_sector_display == "other" else emp_sector_display
 
 lender = st.selectbox("Lender", ["A","B","C"])
 
@@ -126,7 +122,7 @@ if emp_status != "full_time":
     if key in row: row[key] = 1
 
 # Employment Sector
-if emp_sector != "unknown":
+if emp_sector != "other":
     key = f"Employment_Sector_{emp_sector}"
     if key in row: row[key] = 1
 
