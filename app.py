@@ -120,7 +120,7 @@ with tab1:
         # Lender Selection
         lender = st.selectbox(
             "Preferred Lender",
-            ["A ($250 payout)", "B ($350 payout)", "C ($150 payout)"]
+            ["A", "B", "C"]
         )
         lender_val = lender[0]  # Extract just the letter
 
