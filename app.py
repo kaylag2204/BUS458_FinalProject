@@ -14,17 +14,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(current_dir, "my_model.pkl")
 
 # Load the model
-try:
-    with open(model_path, "rb") as file:
-        model_package = pickle.load(file)
-    st.success("✅ Model loaded successfully!")
-except FileNotFoundError:
-    st.error(f"❌ Model file not found at: {model_path}")
-    st.info("Please upload 'my_model.pkl' to the same directory as app.py")
-    st.stop()
-except Exception as e:
-    st.error(f"❌ Error loading model: {str(e)}")
-    st.stop()
+open("my_model.pkl", "rb")
 
 # Extract components from the model package
 model = model_package['model']
