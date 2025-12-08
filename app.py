@@ -25,7 +25,7 @@ model_columns = [
 
     # Reason (reference = cover_an_unexpected_cost)
     'Reason_credit_card_refinancing', 'Reason_debt_conslidation',
-    'Reason_home_improvement', 'Reason_major_purchase', 'Reason_other',
+    'Reason_home_improvement', 'Reason_major_purchase', 'Reason_unknown',
 
     # FICO group (reference = excellent)
     'Fico_Score_group_fair', 'Fico_Score_group_good',
@@ -34,7 +34,7 @@ model_columns = [
     # Employment Status (reference = full_time)
     'Employment_Status_part_time', 'Employment_Status_unemployed',
 
-    # Employment Sector (reference = other)
+    # Employment Sector (reference = unknown)
     'Employment_Sector_communication_services',
     'Employment_Sector_consumer_discretionary',
     'Employment_Sector_consumer_staples', 'Employment_Sector_energy',
@@ -75,7 +75,7 @@ reason = st.selectbox("Reason for Loan", [
     "debt_conslidation",
     "home_improvement",
     "major_purchase",
-    "other"
+    "unknown"
 ])
 
 fico_group = st.selectbox("FICO Score Group", [
@@ -87,7 +87,7 @@ emp_status = st.selectbox("Employment Status", [
 ])
 
 emp_sector = st.selectbox("Employment Sector", [
-    "other",
+    "unknown",
     "communication_services", "consumer_discretionary", "consumer_staples",
     "energy", "financials", "health_care", "industrials",
     "information_technology", "materials", "real_estate", "utilities"
@@ -122,7 +122,7 @@ if emp_status != "full_time":
     if key in row: row[key] = 1
 
 # Employment Sector
-if emp_sector != "other":
+if emp_sector != "unknown":
     key = f"Employment_Sector_{emp_sector}"
     if key in row: row[key] = 1
 
